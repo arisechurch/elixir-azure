@@ -39,7 +39,8 @@ defmodule Azure.MixProject do
       {:named_args, "~> 0.1.1"},
       {:poison, ">= 1.0.0", optional: true},
       {:sweet_xml, "~> 0.7.0"},
-      {:tesla, "~> 1.4.1"},
+      # {:tesla, "~> 1.4.1"},
+      {:tesla, github: "arisechurch/tesla", ref: "streaming"},
       {:timex, "~> 3.7.5"},
       {:xml_builder, "~> 2.2.0"}
     ]

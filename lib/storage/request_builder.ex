@@ -238,7 +238,8 @@ defmodule Azure.Storage.RequestBuilder do
 
   def sign_and_call(
         request = %{storage_context: storage_context = %Storage{}},
-        service
+        service,
+        opts \\ []
       )
       when is_atom(service) and service in [:blob_service, :queue_service, :table_service] do
     uri =
@@ -257,6 +258,13 @@ defmodule Azure.Storage.RequestBuilder do
     |> add_header("x-ms-version", ApiVersion.get_api_version(:storage))
     |> remove_empty_headers()
     |> add_missing(:query, [])
+    |> add_missing(:opts, adapter: [])
+    |> then(fn v ->
+      case Keyword.get(opts, :stream) do
+        true -> put_in(v.opts[:adapter][:stream_to_pid], self())
+        _ -> v
+      end
+    end)
     |> Map.put(:uri, uri)
     |> protect()
     |> Enum.into([])
@@ -301,6 +309,9 @@ defmodule Azure.Storage.RequestBuilder do
     |> copy_x_ms_meta_headers_into_map()
     |> (fn
           response = %{body: ""} ->
+            response
+
+          %{body: body} = response when is_function(body) ->
             response
 
           response = %{body: body} ->

@@ -152,4 +152,18 @@ defmodule Azure.Storage.BlobTest do
       assert {:ok, %{body: ^blob_data}} = Blob.get_blob(target)
     end
   end
+
+  describe "stream" do
+    test "streams the blob content", %{
+      container_context: container_context
+    } do
+      blob_name = "my_blob"
+      blob_data = "my_blob_data"
+      blob = container_context |> Blob.new(blob_name)
+
+      assert {:ok, _} = Blob.put_blob(blob, blob_data)
+      assert {:ok, %{body: body}} = Blob.stream(blob)
+      assert Enum.join(body) == blob_data
+    end
+  end
 end

@@ -171,14 +171,14 @@ defmodule Azure.Storage.Blob do
           container: %Container{storage_context: context, container_name: container_name},
           blob_name: blob_name
         },
-        _opts
+        opts
       ) do
     response =
       context
       |> new_azure_storage_request()
       |> method(:get)
       |> url("/#{container_name}/#{blob_name}")
-      |> sign_and_call(:blob_service)
+      |> sign_and_call(:blob_service, opts)
 
     case response do
       %{status: status} when 400 <= status and status < 500 ->
@@ -188,6 +188,9 @@ defmodule Azure.Storage.Blob do
         {:ok, response |> create_success_response()}
     end
   end
+
+  def stream(%__MODULE__{} = blob, opts \\ []),
+    do: get_blob(blob, Keyword.merge(opts, stream: true))
 
   def get_blob_properties(%__MODULE__{
         container: %Container{storage_context: context, container_name: container_name},
