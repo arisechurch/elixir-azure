@@ -69,7 +69,8 @@ defmodule Azure.Storage.Blob do
           container: %Container{storage_context: context, name: container_name},
           name: blob_name
         },
-        block_list
+        block_list,
+        opts \\ []
       )
       when is_list(block_list) do
     # https://docs.microsoft.com/en-us/rest/api/storageservices/put-block-list
@@ -78,6 +79,7 @@ defmodule Azure.Storage.Blob do
       |> new_azure_storage_request()
       |> method(:put)
       |> url("/#{container_name}/#{blob_name}")
+      |> add_headers_from_opts(opts)
       |> add_param(:query, :comp, "blocklist")
       |> body(block_list |> serialize_block_list())
       |> sign_and_call(:blob_service)
@@ -453,7 +455,7 @@ defmodule Azure.Storage.Blob do
         err
 
       {:ok, ids} ->
-        commit_block_ids(blob, ids)
+        commit_block_ids(blob, ids, filename)
     end
   end
 
@@ -490,13 +492,13 @@ defmodule Azure.Storage.Blob do
     end)
   end
 
-  defp commit_block_ids(blob, ids) do
+  defp commit_block_ids(blob, ids, filename) do
     block_ids =
       1..@max_number_of_blocks
       |> Enum.map(&to_block_id/1)
       |> Enum.filter(&(&1 in ids))
 
-    put_block_list(blob, block_ids)
+    put_block_list(blob, block_ids, content_type: MIME.from_path(filename))
   end
 
   def delete(
