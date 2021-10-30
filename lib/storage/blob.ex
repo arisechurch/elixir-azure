@@ -13,8 +13,7 @@ defmodule Azure.Storage.Blob do
   @max_concurrency 3
   @max_number_of_blocks 50_000
   @mega_byte 1024 * 1024
-  @max_block_size 4 * @mega_byte
-  @max_block_size_100_mega_byte 100 * @mega_byte
+  @default_block_size 4 * @mega_byte
 
   defstruct [:container, :blob_name]
 
@@ -36,7 +35,7 @@ defmodule Azure.Storage.Blob do
         block_id,
         content
       )
-      when is_binary(block_id) and byte_size(content) <= @max_block_size_100_mega_byte do
+      when is_binary(block_id) do
     # https://docs.microsoft.com/en-us/rest/api/storageservices/put-block
 
     response =
@@ -421,10 +420,15 @@ defmodule Azure.Storage.Blob do
     do: config() |> Keyword.get(:suppress_workaround_for_put_blob_from_url_warning?, false)
 
   @spec upload_file(Container.t(), String.t()) :: {:ok, map} | {:error, map}
-  def upload_file(container = %Container{}, source_path, blob_name \\ nil) do
+  def upload_file(
+        container = %Container{},
+        source_path,
+        blob_name \\ nil,
+        block_size \\ @default_block_size
+      ) do
     container
     |> to_blob(source_path, blob_name)
-    |> upload_async(source_path)
+    |> upload_async(source_path, block_size)
   end
 
   defp to_blob(container, source_path, nil) do
@@ -440,9 +444,9 @@ defmodule Azure.Storage.Blob do
     __MODULE__.new(container, target_filename)
   end
 
-  defp upload_async(blob, filename) do
+  defp upload_async(blob, filename, block_size) do
     blob
-    |> upload_stream(filename)
+    |> upload_stream(filename, block_size)
     |> stream_to_block_ids()
     |> case do
       {:error, _reason} = err ->
@@ -453,9 +457,9 @@ defmodule Azure.Storage.Blob do
     end
   end
 
-  defp upload_stream(blob, filename) do
+  defp upload_stream(blob, filename, block_size) do
     filename
-    |> File.stream!([], @max_block_size)
+    |> File.stream!([], block_size)
     |> Stream.zip(1..@max_number_of_blocks)
     |> Task.async_stream(
       fn {content, i} ->
