@@ -20,9 +20,9 @@ defmodule Azure.Storage.BlobTest do
     storage_context = build(:storage_context)
     container_context = storage_context |> Container.new("blob-test")
 
-    Container.delete_container(container_context)
+    Container.delete(container_context)
 
-    {:ok, _response} = Container.ensure_container(container_context)
+    {:ok, _response} = Container.ensure(container_context)
 
     %{storage_context: storage_context, container_context: container_context}
   end
@@ -33,29 +33,28 @@ defmodule Azure.Storage.BlobTest do
       blob_data = build(:blob_data)
       blob = container_context |> Blob.new(blob_name)
 
-      blob |> Blob.delete_blob()
-      {:ok, %{status: 201}} = blob |> Blob.put_blob(blob_data)
+      blob |> Blob.delete()
+      {:ok, %{status: 201}} = blob |> Blob.put(blob_data)
 
       %{blob: blob, container_context: container_context}
     end
 
     test "gets blob properties", %{blob: blob} do
-      assert {:ok, %{status: 200, properties: %BlobProperties{}}} =
-               blob |> Blob.get_blob_properties()
+      assert {:ok, %{status: 200, properties: %BlobProperties{}}} = blob |> Blob.get_properties()
     end
 
     test "error when blob not found", %{container_context: container_context} do
       blob_name = build(:blob_name)
       blob = container_context |> Blob.new(blob_name)
 
-      assert {:error, %{status: 404}} = blob |> Blob.get_blob_properties()
+      assert {:error, %{status: 404}} = blob |> Blob.get_properties()
     end
 
     test "set blob properties", %{blob: blob} do
       content_type = build(:content_type)
       content_md5 = build(:content_md5)
 
-      {:ok, %{status: 200, properties: blob_properties}} = blob |> Blob.get_blob_properties()
+      {:ok, %{status: 200, properties: blob_properties}} = blob |> Blob.get_properties()
 
       refute blob_properties.content_type == content_type
 
@@ -64,17 +63,16 @@ defmodule Azure.Storage.BlobTest do
         |> Map.put(:content_type, content_type)
         |> Map.put(:content_md5, content_md5)
 
-      assert {:ok, %{status: 200}} = blob |> Blob.set_blob_properties(blob_properties)
+      assert {:ok, %{status: 200}} = blob |> Blob.set_properties(blob_properties)
 
-      assert {:ok, %{status: 200, properties: blob_properties}} =
-               blob |> Blob.get_blob_properties()
+      assert {:ok, %{status: 200, properties: blob_properties}} = blob |> Blob.get_properties()
 
       assert blob_properties.content_type == content_type
       assert blob_properties.content_md5 == content_md5
     end
   end
 
-  describe "put_blob" do
+  describe "put" do
     test "puts a blob", %{container_context: container_context} do
       blob_name = "my_blob"
       blob_data = "my_blob_data"
@@ -82,13 +80,13 @@ defmodule Azure.Storage.BlobTest do
 
       assert {:ok, %{status: 201}} =
                blob
-               |> Blob.put_blob(blob_data)
+               |> Blob.put(blob_data)
 
-      assert {:ok, %{body: ^blob_data}} = blob |> Blob.get_blob()
+      assert {:ok, %{body: ^blob_data}} = blob |> Blob.get()
     end
   end
 
-  describe "put_blob_by_url" do
+  describe "put_by_url" do
     test "puts a blob from a URL", %{
       container_context: container_context,
       storage_context: storage_context
@@ -117,11 +115,10 @@ defmodule Azure.Storage.BlobTest do
 
       blob = container_context |> Blob.new(blob_name)
 
-      assert {:ok, %{status: 201}} =
-               blob |> Blob.put_blob_from_url(url, content_type_workaround: true)
+      assert {:ok, %{status: 201}} = blob |> Blob.put_from_url(url, content_type_workaround: true)
 
       assert {:ok, %{status: 200, body: destination_body, headers: destination_headers}} =
-               blob |> Blob.get_blob()
+               blob |> Blob.get()
 
       assert destination_body == expected_contents
 
@@ -145,11 +142,11 @@ defmodule Azure.Storage.BlobTest do
       source = container_context |> Blob.new("source_blob")
       target = container_context |> Blob.new("target_blob")
 
-      assert {:ok, %{status: 201}} = Blob.put_blob(source, blob_data)
-      assert {:ok, %{body: ^blob_data}} = Blob.get_blob(source)
+      assert {:ok, %{status: 201}} = Blob.put(source, blob_data)
+      assert {:ok, %{body: ^blob_data}} = Blob.get(source)
 
       assert {:ok, %{x_ms_copy_status: "success"}} = Blob.copy(source, target)
-      assert {:ok, %{body: ^blob_data}} = Blob.get_blob(target)
+      assert {:ok, %{body: ^blob_data}} = Blob.get(target)
     end
   end
 
@@ -161,7 +158,7 @@ defmodule Azure.Storage.BlobTest do
       blob_data = "my_blob_data"
       blob = container_context |> Blob.new(blob_name)
 
-      assert {:ok, _} = Blob.put_blob(blob, blob_data)
+      assert {:ok, _} = Blob.put(blob, blob_data)
       assert {:ok, %{body: body}} = Blob.stream(blob)
       assert Enum.join(body) == blob_data
     end

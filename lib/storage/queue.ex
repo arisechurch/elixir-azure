@@ -56,7 +56,7 @@ defmodule Azure.Storage.Queue do
       ]
   end
 
-  def create_queue(%__MODULE__{storage_context: context, queue_name: queue_name}, opts \\ []) do
+  def create(%__MODULE__{storage_context: context, queue_name: queue_name}, opts \\ []) do
     # https://docs.microsoft.com/en-us/rest/api/storageservices/create-queue4
 
     #
@@ -92,7 +92,7 @@ defmodule Azure.Storage.Queue do
     end
   end
 
-  def delete_queue(%__MODULE__{storage_context: context, queue_name: queue_name}, opts \\ []) do
+  def delete(%__MODULE__{storage_context: context, queue_name: queue_name}, opts \\ []) do
     # https://docs.microsoft.com/en-us/rest/api/storageservices/delete-queue3
     %{timeout: timeout} =
       case [timeout: 0]
@@ -149,7 +149,7 @@ defmodule Azure.Storage.Queue do
     end
   end
 
-  def set_queue_metadata(
+  def set_metadata(
         %__MODULE__{storage_context: context, queue_name: queue_name},
         opts \\ []
       ) do

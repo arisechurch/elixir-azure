@@ -10,14 +10,14 @@ defmodule Azure.Storage.Container do
   alias Azure.Storage
   alias Azure.Storage.{BlobPolicy, DateTimeUtils}
 
-  @type t :: %__MODULE__{container_name: String.t(), storage_context: map}
+  @type t :: %__MODULE__{name: String.t(), storage_context: map}
 
-  @enforce_keys [:storage_context, :container_name]
-  defstruct [:storage_context, :container_name]
+  @enforce_keys [:storage_context, :name]
+  defstruct [:storage_context, :name]
 
   def new(storage_context = %Storage{}, container_name)
       when is_binary(container_name),
-      do: %__MODULE__{storage_context: storage_context, container_name: container_name}
+      do: %__MODULE__{storage_context: storage_context, name: container_name}
 
   defmodule Responses do
     @moduledoc false
@@ -73,7 +73,7 @@ defmodule Azure.Storage.Container do
       ]
   end
 
-  def list_containers(context = %Storage{}) do
+  def list(context = %Storage{}) do
     # https://docs.microsoft.com/en-us/rest/api/storageservices/list-containers2
     response =
       context
@@ -94,7 +94,7 @@ defmodule Azure.Storage.Container do
     end
   end
 
-  def create_container(%__MODULE__{storage_context: context, container_name: container_name}) do
+  def create(%__MODULE__{storage_context: context, name: container_name}) do
     # https://docs.microsoft.com/en-us/rest/api/storageservices/create-container
     response =
       context
@@ -118,17 +118,17 @@ defmodule Azure.Storage.Container do
   @doc """
   Returns an existing container if found or creates a new one if not.
   """
-  def ensure_container(container) do
-    case create_container(container) do
+  def ensure(container) do
+    case create(container) do
       {:ok, %{status: 201} = response} -> {:ok, response}
       {:error, %{error_code: "ContainerAlreadyExists"} = response} -> {:ok, response}
       other -> other
     end
   end
 
-  def get_container_properties(%__MODULE__{
+  def get_properties(%__MODULE__{
         storage_context: context,
-        container_name: container_name
+        name: container_name
       }) do
     # https://docs.microsoft.com/en-us/rest/api/storageservices/get-container-properties
     response =
@@ -150,7 +150,7 @@ defmodule Azure.Storage.Container do
     end
   end
 
-  def get_container_metadata(%__MODULE__{storage_context: context, container_name: container_name}) do
+  def get_metadata(%__MODULE__{storage_context: context, name: container_name}) do
     # https://docs.microsoft.com/en-us/rest/api/storageservices/get-container-metadata
 
     response =
@@ -173,7 +173,7 @@ defmodule Azure.Storage.Container do
     end
   end
 
-  def get_container_acl(%__MODULE__{storage_context: context, container_name: container_name}) do
+  def get_acl(%__MODULE__{storage_context: context, name: container_name}) do
     # https://docs.microsoft.com/en-us/rest/api/storageservices/get-container-acl
 
     response =
@@ -197,25 +197,25 @@ defmodule Azure.Storage.Container do
     end
   end
 
-  def set_container_acl_public_access_off(container = %__MODULE__{}),
-    do: container |> set_container_acl(:off)
+  def set_acl_public_access_off(container = %__MODULE__{}),
+    do: container |> set_acl(:off)
 
-  def set_container_acl_public_access_blob(container = %__MODULE__{}),
-    do: container |> set_container_acl(:blob)
+  def set_acl_public_access_blob(container = %__MODULE__{}),
+    do: container |> set_acl(:blob)
 
-  def set_container_acl_public_access_container(container = %__MODULE__{}),
-    do: container |> set_container_acl(:container)
+  def set_acl_public_access_container(container = %__MODULE__{}),
+    do: container |> set_acl(:container)
 
-  defp container_access_level_to_string(:off), do: nil
-  defp container_access_level_to_string(:blob), do: "blob"
-  defp container_access_level_to_string(:container), do: "container"
+  defp access_level_to_string(:off), do: nil
+  defp access_level_to_string(:blob), do: "blob"
+  defp access_level_to_string(:container), do: "container"
 
   def parse_access_level(nil), do: :off
   def parse_access_level("blob"), do: :blob
   def parse_access_level("container"), do: :container
 
-  def set_container_acl(
-        %__MODULE__{storage_context: context, container_name: container_name},
+  def set_acl(
+        %__MODULE__{storage_context: context, name: container_name},
         access_level
       )
       when access_level |> is_atom() and access_level in [:off, :blob, :container] do
@@ -229,9 +229,9 @@ defmodule Azure.Storage.Container do
       |> add_param(:query, :restype, "container")
       |> add_param(:query, :comp, "acl")
       |> add_header_if(
-        container_access_level_to_string(access_level) != nil,
+        access_level_to_string(access_level) != nil,
         "x-ms-blob-public-access",
-        container_access_level_to_string(access_level)
+        access_level_to_string(access_level)
       )
       |> sign_and_call(:blob_service)
 
@@ -246,8 +246,8 @@ defmodule Azure.Storage.Container do
     end
   end
 
-  def set_container_acl(
-        %__MODULE__{storage_context: context, container_name: container_name},
+  def set_acl(
+        %__MODULE__{storage_context: context, name: container_name},
         access_policies
       )
       when access_policies |> is_list() do
@@ -275,7 +275,7 @@ defmodule Azure.Storage.Container do
     end
   end
 
-  def delete_container(%__MODULE__{storage_context: context, container_name: container_name}) do
+  def delete(%__MODULE__{storage_context: context, name: container_name}) do
     # https://docs.microsoft.com/en-us/rest/api/storageservices/delete-container
     response =
       context
@@ -297,7 +297,7 @@ defmodule Azure.Storage.Container do
   end
 
   def list_blobs(
-        %__MODULE__{storage_context: context, container_name: container_name},
+        %__MODULE__{storage_context: context, name: container_name},
         opts \\ [
           prefix: nil,
           delimiter: nil,

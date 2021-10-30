@@ -12,7 +12,7 @@ defmodule Azure.Storage.ContainerLease do
   # "x-ms-lease-duration" required for acquire. -1, 15..60
   # "x-ms-proposed-lease-id" Optional for acquire, required for change
   defp container_lease_handler(
-         %Container{storage_context: context, container_name: container_name},
+         %Container{storage_context: context, name: container_name},
          expected_status_code,
          fn_prepare_request,
          fn_prepare_response

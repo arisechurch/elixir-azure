@@ -13,13 +13,13 @@ defmodule Azure.Storage.ConnectionString do
     connection_string
     |> String.split(";")
     |> Enum.reduce(%{}, fn key_value_string, acc ->
-      {key, value} = parse_connection_string_item(key_value_string)
+      {key, value} = parse_item(key_value_string)
 
       Map.put(acc, key, value)
     end)
   end
 
-  defp parse_connection_string_item(item) do
+  defp parse_item(item) do
     # The value part of the item can contain `=` (esp the account key which is base64-encoded), so
     # `parts: 2` is essential.
     [k, v] = item |> String.split("=", parts: 2)

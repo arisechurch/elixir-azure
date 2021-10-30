@@ -9,17 +9,17 @@ defmodule Azure.Storage.Blob do
   import Azure.Storage.RequestBuilder
   alias Azure.Storage.{BlobProperties, Container}
 
-  @enforce_keys [:container, :blob_name]
+  @enforce_keys [:container, :name]
   @max_concurrency 3
   @max_number_of_blocks 50_000
   @mega_byte 1024 * 1024
   @default_block_size 4 * @mega_byte
 
-  defstruct [:container, :blob_name]
+  defstruct [:container, :name]
 
   def new(container = %Container{}, blob_name)
       when is_binary(blob_name),
-      do: %__MODULE__{container: container, blob_name: blob_name}
+      do: %__MODULE__{container: container, name: blob_name}
 
   def to_block_id(block_id) when is_binary(block_id), do: block_id
   def to_block_id(block_id) when is_integer(block_id), do: <<block_id::120>> |> Base.encode64()
@@ -29,8 +29,8 @@ defmodule Azure.Storage.Blob do
   """
   def put_block(
         %__MODULE__{
-          container: %Container{storage_context: context, container_name: container_name},
-          blob_name: blob_name
+          container: %Container{storage_context: context, name: container_name},
+          name: blob_name
         },
         block_id,
         content
@@ -66,8 +66,8 @@ defmodule Azure.Storage.Blob do
   """
   def put_block_list(
         %__MODULE__{
-          container: %Container{storage_context: context, container_name: container_name},
-          blob_name: blob_name
+          container: %Container{storage_context: context, name: container_name},
+          name: blob_name
         },
         block_list
       )
@@ -132,8 +132,8 @@ defmodule Azure.Storage.Blob do
 
   def get_block_list(
         %__MODULE__{
-          container: %Container{storage_context: context, container_name: container_name},
-          blob_name: blob_name
+          container: %Container{storage_context: context, name: container_name},
+          name: blob_name
         },
         block_list_type \\ :all,
         snapshot \\ nil
@@ -163,12 +163,12 @@ defmodule Azure.Storage.Blob do
     end
   end
 
-  def get_blob(blob, opts \\ [])
+  def get(blob, opts \\ [])
 
-  def get_blob(
+  def get(
         %__MODULE__{
-          container: %Container{storage_context: context, container_name: container_name},
-          blob_name: blob_name
+          container: %Container{storage_context: context, name: container_name},
+          name: blob_name
         },
         opts
       ) do
@@ -189,11 +189,11 @@ defmodule Azure.Storage.Blob do
   end
 
   def stream(%__MODULE__{} = blob, opts \\ []),
-    do: get_blob(blob, Keyword.merge(opts, stream: true))
+    do: get(blob, Keyword.merge(opts, stream: true))
 
-  def get_blob_properties(%__MODULE__{
-        container: %Container{storage_context: context, container_name: container_name},
-        blob_name: blob_name
+  def get_properties(%__MODULE__{
+        container: %Container{storage_context: context, name: container_name},
+        name: blob_name
       }) do
     response =
       context
@@ -231,10 +231,10 @@ defmodule Azure.Storage.Blob do
 
   See <https://docs.microsoft.com/en-us/rest/api/storageservices/set-blob-properties>
   """
-  def set_blob_properties(
+  def set_properties(
         %__MODULE__{
-          container: %Container{storage_context: context, container_name: container_name},
-          blob_name: blob_name
+          container: %Container{storage_context: context, name: container_name},
+          name: blob_name
         },
         blob_properties = %BlobProperties{}
       ) do
@@ -265,13 +265,13 @@ defmodule Azure.Storage.Blob do
   @doc """
   Updates blob properties.
 
-  Similar to `set_blob_properties/2` but keeps existing values by first performing
-  `get_blob_properties/2`, merging the result and handing it over to `set_blob_properties/2`.
+  Similar to `set_properties/2` but keeps existing values by first performing
+  `get_properties/2`, merging the result and handing it over to `set_properties/2`.
   """
-  def update_blob_properties(blob, blob_properties) do
-    with {:ok, %{properties: existing_blob_properties}} <- blob |> get_blob_properties() do
+  def update_properties(blob, blob_properties) do
+    with {:ok, %{properties: existing_blob_properties}} <- blob |> get_properties() do
       merged_properties = Map.merge(existing_blob_properties, blob_properties)
-      blob |> set_blob_properties(merged_properties)
+      blob |> set_properties(merged_properties)
     end
   end
 
@@ -295,10 +295,10 @@ defmodule Azure.Storage.Blob do
 
   defp transform_set_blob_property_header(header), do: header
 
-  def put_blob(
+  def put(
         %__MODULE__{
-          container: %Container{storage_context: context, container_name: container_name},
-          blob_name: blob_name
+          container: %Container{storage_context: context, name: container_name},
+          name: blob_name
         },
         blob_data,
         opts \\ []
@@ -342,10 +342,10 @@ defmodule Azure.Storage.Blob do
   defp header_for_opt(:content_disposition), do: "x-ms-blob-content-disposition"
   defp header_for_opt(:content_encoding), do: "x-ms-blob-content-encoding"
 
-  def put_blob_from_url(
+  def put_from_url(
         blob = %__MODULE__{
-          container: %Container{storage_context: context, container_name: container_name},
-          blob_name: blob_name
+          container: %Container{storage_context: context, name: container_name},
+          name: blob_name
         },
         url,
         opts \\ []
@@ -375,7 +375,7 @@ defmodule Azure.Storage.Blob do
 
       %{status: 201} ->
         with {:ok, _response} <-
-               workaround_for_put_blob_from_url(
+               workaround_for_put_from_url(
                  blob,
                  url,
                  content_opts,
@@ -386,14 +386,14 @@ defmodule Azure.Storage.Blob do
     end
   end
 
-  # Workaround for a bug in Azure Storage where original content-type is lost on put_blob_from_url
+  # Workaround for a bug in Azure Storage where original content-type is lost on put_from_url
   # requests https://github.com/joeapearson/elixir-azure/issues/2
-  defp workaround_for_put_blob_from_url(_blob, _url, _content_opts, false) do
-    unless suppress_workaround_for_put_blob_from_url_warning?() do
+  defp workaround_for_put_from_url(_blob, _url, _content_opts, false) do
+    unless suppress_workaround_for_put_from_url_warning?() do
       Logger.warning("""
       Your blob's content-* metadata may not have been correctly copied.
 
-      Set `content_type_workaround: true` when calling `Blob.put_blob_from_url/2` to work around.
+      Set `content_type_workaround: true` when calling `Blob.put_from_url/2` to work around.
 
       See https://github.com/joeapearson/elixir-azure/issues/2
       """)
@@ -402,22 +402,22 @@ defmodule Azure.Storage.Blob do
     {:ok, nil}
   end
 
-  defp workaround_for_put_blob_from_url(blob, url, [], true) do
+  defp workaround_for_put_from_url(blob, url, [], true) do
     # In this case we have to do the work of finding out what the original source content-type was
     # and then setting it on the blob.  Results in many requests and accordingly is less reliable.
 
     with {:ok, %{status: 200, headers: source_headers}} <- Tesla.head(url) do
       blob_properties = BlobProperties.deserialise(source_headers)
-      update_blob_properties(blob, blob_properties)
+      update_properties(blob, blob_properties)
     end
   end
 
-  defp workaround_for_put_blob_from_url(blob, _url, content_type_attrs, true) do
-    blob |> update_blob_properties(struct!(BlobProperties, content_type_attrs))
+  defp workaround_for_put_from_url(blob, _url, content_type_attrs, true) do
+    blob |> update_properties(struct!(BlobProperties, content_type_attrs))
   end
 
-  defp suppress_workaround_for_put_blob_from_url_warning?(),
-    do: config() |> Keyword.get(:suppress_workaround_for_put_blob_from_url_warning?, false)
+  defp suppress_workaround_for_put_from_url_warning?(),
+    do: config() |> Keyword.get(:suppress_workaround_for_put_from_url_warning?, false)
 
   @spec upload_file(Container.t(), String.t()) :: {:ok, map} | {:error, map}
   def upload_file(
@@ -427,20 +427,20 @@ defmodule Azure.Storage.Blob do
         block_size \\ @default_block_size
       ) do
     container
-    |> to_blob(source_path, blob_name)
+    |> from_path(source_path, blob_name)
     |> upload_async(source_path, block_size)
   end
 
-  defp to_blob(container, source_path, nil) do
+  defp from_path(container, source_path, nil) do
     target_filename =
       source_path
       |> Path.basename()
       |> URI.encode()
 
-    to_blob(container, source_path, target_filename)
+    from_path(container, source_path, target_filename)
   end
 
-  defp to_blob(container, _source_filename, target_filename) do
+  defp from_path(container, _source_filename, target_filename) do
     __MODULE__.new(container, target_filename)
   end
 
@@ -499,10 +499,10 @@ defmodule Azure.Storage.Blob do
     put_block_list(blob, block_ids)
   end
 
-  def delete_blob(
+  def delete(
         %__MODULE__{
-          container: %Container{storage_context: context, container_name: container_name},
-          blob_name: blob_name
+          container: %Container{storage_context: context, name: container_name},
+          name: blob_name
         },
         opts \\ []
       ) do
@@ -536,8 +536,8 @@ defmodule Azure.Storage.Blob do
   def copy_stream(
         %__MODULE__{} = source,
         %__MODULE__{
-          container: %Container{storage_context: context, container_name: container_name},
-          blob_name: blob_name
+          container: %Container{storage_context: context, name: container_name},
+          name: blob_name
         } = target,
         opts \\ []
       ) do
@@ -559,7 +559,7 @@ defmodule Azure.Storage.Blob do
       fn
         nil ->
           :timer.sleep(poll_interval)
-          {[get_blob_properties(target)], nil}
+          {[get_properties(target)], nil}
 
         %{status: status} = response when 400 <= status and status < 500 ->
           {[{:error, response |> create_error_response()}], nil}
@@ -595,9 +595,9 @@ defmodule Azure.Storage.Blob do
   def url(%__MODULE__{
         container: %Container{
           storage_context: context,
-          container_name: container
+          name: container
         },
-        blob_name: blob_name
+        name: blob_name
       }),
       do: Azure.Storage.endpoint_url(context, :blob_service) <> "/#{container}/#{blob_name}"
 

@@ -17,13 +17,13 @@ defmodule Azure.Storage.SharedAccessSignatureTest do
     storage_context = build(:storage_context)
     container_context = storage_context |> Container.new("sas-test")
 
-    {:ok, _response} = Container.ensure_container(container_context)
+    {:ok, _response} = Container.ensure(container_context)
 
     blob = container_context |> Blob.new(@blob_name)
 
     {:ok, %{status: 201}} =
       blob
-      |> Blob.put_blob(@blob_data)
+      |> Blob.put(@blob_data)
 
     %{storage_context: storage_context, container_context: container_context, blob: blob}
   end

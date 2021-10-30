@@ -255,7 +255,7 @@ defmodule Azure.Storage.RequestBuilder do
     request
     |> add_header_if(add_content_type_header?, "Content-Type", "application/octet-stream")
     |> add_header("x-ms-date", DateTimeUtils.utc_now())
-    |> add_header("x-ms-version", ApiVersion.get_api_version(:storage))
+    |> add_header("x-ms-version", ApiVersion.get(:storage))
     |> remove_empty_headers()
     |> add_missing(:query, [])
     |> add_missing(:opts, adapter: [])
