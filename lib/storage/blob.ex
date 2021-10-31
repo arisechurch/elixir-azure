@@ -425,12 +425,15 @@ defmodule Azure.Storage.Blob do
   def upload_file(
         container = %Container{},
         source_path,
-        blob_name \\ nil,
-        block_size \\ @default_block_size
+        opts \\ []
       ) do
+    opts =
+      opts
+      |> Keyword.put_new(:content_type, MIME.from_path(source_path))
+
     container
-    |> from_path(source_path, blob_name)
-    |> upload_async(source_path, block_size)
+    |> from_path(source_path, Keyword.get(opts, :blob_name))
+    |> upload_async(source_path, opts)
   end
 
   defp from_path(container, source_path, nil) do
@@ -446,16 +449,16 @@ defmodule Azure.Storage.Blob do
     __MODULE__.new(container, target_filename)
   end
 
-  defp upload_async(blob, filename, block_size) do
+  defp upload_async(blob, filename, opts) do
     blob
-    |> upload_stream(filename, block_size)
+    |> upload_stream(filename, Keyword.get(opts, :block_size, @default_block_size))
     |> stream_to_block_ids()
     |> case do
       {:error, _reason} = err ->
         err
 
       {:ok, ids} ->
-        commit_block_ids(blob, ids, filename)
+        commit_block_ids(blob, ids, opts)
     end
   end
 
@@ -492,13 +495,13 @@ defmodule Azure.Storage.Blob do
     end)
   end
 
-  defp commit_block_ids(blob, ids, filename) do
+  defp commit_block_ids(blob, ids, opts) do
     block_ids =
       1..@max_number_of_blocks
       |> Enum.map(&to_block_id/1)
       |> Enum.filter(&(&1 in ids))
 
-    put_block_list(blob, block_ids, content_type: MIME.from_path(filename))
+    put_block_list(blob, block_ids, opts)
   end
 
   def delete(
