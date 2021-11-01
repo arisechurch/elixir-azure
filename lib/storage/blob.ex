@@ -334,7 +334,10 @@ defmodule Azure.Storage.Blob do
 
   defp add_headers_from_opts(request, opts) do
     Enum.reduce(opts, request, fn {key, value}, request ->
-      request |> add_header(header_for_opt(key), value)
+      case header_for_opt(key) do
+        nil -> request
+        key -> add_header(request, key, value)
+      end
     end)
   end
 
@@ -343,6 +346,7 @@ defmodule Azure.Storage.Blob do
   defp header_for_opt(:content_type), do: "x-ms-blob-content-type"
   defp header_for_opt(:content_disposition), do: "x-ms-blob-content-disposition"
   defp header_for_opt(:content_encoding), do: "x-ms-blob-content-encoding"
+  defp header_for_opt(_), do: nil
 
   def put_from_url(
         blob = %__MODULE__{
