@@ -346,6 +346,7 @@ defmodule Azure.Storage.Blob do
   defp header_for_opt(:content_type), do: "x-ms-blob-content-type"
   defp header_for_opt(:content_disposition), do: "x-ms-blob-content-disposition"
   defp header_for_opt(:content_encoding), do: "x-ms-blob-content-encoding"
+  defp header_for_opt(:content_md5), do: "x-ms-blob-content-md5"
   defp header_for_opt(_), do: nil
 
   def put_from_url(
