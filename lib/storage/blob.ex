@@ -179,6 +179,12 @@ defmodule Azure.Storage.Blob do
       |> new_azure_storage_request()
       |> method(:get)
       |> url("/#{container_name}/#{blob_name}")
+      |> then(fn request ->
+        case Keyword.get(opts, :stream) do
+          true -> stream_response(request)
+          _ -> request
+        end
+      end)
       |> sign_and_call(:blob_service, opts)
 
     case response do

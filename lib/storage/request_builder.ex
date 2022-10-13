@@ -17,6 +17,8 @@ defmodule Azure.Storage.RequestBuilder do
 
   def url(request, u), do: request |> Map.put_new(:url, u)
 
+  def stream_response(request), do: request |> Map.put(:response, :stream)
+
   def body(request, body) do
     request
     |> add_header("Content-Length", "#{body |> byte_size()}")
@@ -259,12 +261,6 @@ defmodule Azure.Storage.RequestBuilder do
     |> remove_empty_headers()
     |> add_missing(:query, [])
     |> add_missing(:opts, adapter: [])
-    |> then(fn v ->
-      case Keyword.get(opts, :stream) do
-        true -> put_in(v.opts[:adapter][:stream_to_pid], self())
-        _ -> v
-      end
-    end)
     |> Map.put(:uri, uri)
     |> protect()
     |> Enum.into([])
